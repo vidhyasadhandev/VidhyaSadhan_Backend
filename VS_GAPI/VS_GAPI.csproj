@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="VidhyaSadhan-4cc497c45b73.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="VidhyaSadhan-4cc497c45b73.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="9.0.0" />
+    <PackageReference Include="Google.Apis" Version="1.46.0" />
+    <PackageReference Include="Google.Apis.Classroom.v1" Version="1.46.0.1993" />
+    <PackageReference Include="Google.Apis.Core" Version="1.46.0" />
+    <PackageReference Include="Google.Cloud.Iam.V1" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VS_Models\VS_Models.csproj" />
+  </ItemGroup>
+
+</Project>
