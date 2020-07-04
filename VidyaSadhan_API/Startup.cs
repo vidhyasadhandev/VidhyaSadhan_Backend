@@ -9,6 +9,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -93,34 +94,34 @@ namespace VidyaSadhan_API
             {
                 x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer(x =>
-            {
-                x.Events = new JwtBearerEvents
-                {
-                    OnTokenValidated = context =>
-                    {
-                        var userService = context.HttpContext.RequestServices.GetRequiredService<UserService>();
-                        var userId = int.Parse(context.Principal.Identity.Name);
-                        var user = userService.GetUserById(userId.ToString());
-                        if (user == null)
-                        {
-                            // return unauthorized if user no longer exists
-                            context.Fail("Unauthorized");
-                        }
-                        return Task.CompletedTask;
-                    }
-                };
-                x.RequireHttpsMetadata = false;
-                x.SaveToken = true;
-                x.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(securityKey),
-                    ValidateIssuer = false,
-                    ValidateAudience = false
-                };
             });
+            //.AddJwtBearer(x =>
+            //{
+            //    x.Events = new JwtBearerEvents
+            //    {
+            //        OnTokenValidated = context =>
+            //        {
+            //            var userService = context.HttpContext.RequestServices.GetRequiredService<UserService>();
+            //            var userId = int.Parse(context.Principal.Identity.Name);
+            //            var user = userService.GetUserById(userId.ToString());
+            //            if (user == null)
+            //            {
+            //                // return unauthorized if user no longer exists
+            //                context.Fail("Unauthorized");
+            //            }
+            //            return Task.CompletedTask;
+            //        }
+            //    };
+            //    x.RequireHttpsMetadata = false;
+            //    x.SaveToken = true;
+            //    x.TokenValidationParameters = new TokenValidationParameters
+            //    {
+            //        ValidateIssuerSigningKey = true,
+            //        IssuerSigningKey = new SymmetricSecurityKey(securityKey),
+            //        ValidateIssuer = false,
+            //        ValidateAudience = false
+            //    };
+            //});
 
             services.AddTransient<UserService>();
             services.AddSwaggerGen(c =>
@@ -161,11 +162,15 @@ namespace VidyaSadhan_API
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
+          //  app.UseHttpsRedirection();
 
             app.UseRouting();
 
-         //   app.UseCertificateForwarding();
+
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            });
             app.UseAuthentication();
             app.UseAuthorization();
 
