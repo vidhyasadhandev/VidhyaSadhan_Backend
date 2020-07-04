@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -59,17 +60,34 @@ namespace VidyaSadhan_API
                     return result;
                 };
             });
+
             services.AddDbContext<VSDbContext>(options => options.UseMySql(Configuration.GetConnectionString("DbConnection")));
             services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<VSDbContext>();
 
-            // services.AddGAPIConnector();
             services.AddTransient<ICourseService, CourseService>();
 
             var appSettings = Configuration.GetSection("Secrets:AppSecret");
             var securityKey = Encoding.ASCII.GetBytes(appSettings.Value);
 
             services.Configure<ConfigSettings>(Configuration.GetSection("Secrets"));
+
+            //services.AddCertificateForwarding(options =>
+            //{
+            //    options.CertificateHeader = "X-SSL-CERT";
+            //    options.HeaderConverter = (headerValue) =>
+            //    {
+            //        X509Certificate2 clientCertificate = null;
+
+            //        if (!string.IsNullOrWhiteSpace(headerValue))
+            //        {
+            //            byte[] bytes = StringToByteArray(headerValue);
+            //            clientCertificate = new X509Certificate2(bytes);
+            //        }
+
+            //        return clientCertificate;
+            //    };
+            //});
 
             services.AddAuthentication(x =>
             {
@@ -112,10 +130,23 @@ namespace VidyaSadhan_API
 
         }
 
+        private byte[] StringToByteArray(string headerValue)
+        {
+            int NumberChars = headerValue.Length;
+            byte[] bytes = new byte[NumberChars / 2];
+
+            for (int i = 0; i < NumberChars; i += 2)
+            {
+                bytes[i / 2] = Convert.ToByte(headerValue.Substring(i, 2), 16);
+            }
+
+            return bytes;
+        }
+
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, VSDbContext vSDbContext)
         {
-            vSDbContext.Database.Migrate();
+          //  vSDbContext.Database.Migrate();
             app.UseCors("trvistapolicy");
             app.UseSwagger();
 
@@ -134,6 +165,7 @@ namespace VidyaSadhan_API
 
             app.UseRouting();
 
+         //   app.UseCertificateForwarding();
             app.UseAuthentication();
             app.UseAuthorization();
 

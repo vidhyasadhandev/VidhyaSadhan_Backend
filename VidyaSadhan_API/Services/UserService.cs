@@ -67,7 +67,7 @@ namespace VidyaSadhan_API.Services
                 return results.Succeeded;
             }
             catch (Exception)
-            {
+            { 
                 throw new VSException("Unable to Register With Following Errors:", results?.Errors);
             }
         }

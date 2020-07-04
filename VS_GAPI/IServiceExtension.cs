@@ -10,7 +10,7 @@ namespace VS_GAPI
     {
         public static IServiceCollection AddGAPIConnector(this IServiceCollection services)
         {
-            services.AddTransient<ICourseService, CourseService>();
+           // services.AddTransient<ICourseService, CourseService>();
             return services;
         }
     }

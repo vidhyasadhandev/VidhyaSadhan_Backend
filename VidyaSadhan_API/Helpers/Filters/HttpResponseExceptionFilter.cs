@@ -20,6 +20,7 @@ namespace VidyaSadhan_API.Helpers.Filters
                 context.Result = new ObjectResult(exception.Value)
                 {
                     StatusCode = exception.Status,
+                    Value = exception.Value + exception.InnerException.ToString(),
                 };
                 context.ExceptionHandled = true;
             }
