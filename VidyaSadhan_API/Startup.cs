@@ -20,6 +20,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using VidyaSadhan_API.Entities;
 using VidyaSadhan_API.Extensions;
 using VidyaSadhan_API.Helpers;
 using VidyaSadhan_API.Helpers.Filters;
@@ -63,8 +64,11 @@ namespace VidyaSadhan_API
             });
 
             services.AddDbContext<VSDbContext>(options => options.UseMySql(Configuration.GetConnectionString("DbConnection")));
-            services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddEntityFrameworkStores<VSDbContext>();
+            services.AddIdentity<Account, IdentityRole>(options =>
+            {
+                options.SignIn.RequireConfirmedAccount = true;
+                options.Tokens.AuthenticatorTokenProvider = "VSadhan";
+            }).AddEntityFrameworkStores<VSDbContext>().AddDefaultTokenProviders();
 
             services.AddTransient<ICourseService, CourseService>();
 
@@ -94,36 +98,38 @@ namespace VidyaSadhan_API
             {
                 x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(x =>
+            {
+                x.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = context =>
+                    {
+                        var userService = context.HttpContext.RequestServices.GetRequiredService<UserService>();
+                        var userId = int.Parse(context.Principal.Identity.Name);
+                        var user = userService.GetUserById(userId.ToString());
+                        if (user == null)
+                        {
+                            context.Fail("Unauthorized");
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
+                x.RequireHttpsMetadata = false;
+                x.SaveToken = true;
+                x.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(securityKey),
+                    ValidateIssuer = false,
+                    ValidateAudience = false
+                };
             });
-            //.AddJwtBearer(x =>
-            //{
-            //    x.Events = new JwtBearerEvents
-            //    {
-            //        OnTokenValidated = context =>
-            //        {
-            //            var userService = context.HttpContext.RequestServices.GetRequiredService<UserService>();
-            //            var userId = int.Parse(context.Principal.Identity.Name);
-            //            var user = userService.GetUserById(userId.ToString());
-            //            if (user == null)
-            //            {
-            //                // return unauthorized if user no longer exists
-            //                context.Fail("Unauthorized");
-            //            }
-            //            return Task.CompletedTask;
-            //        }
-            //    };
-            //    x.RequireHttpsMetadata = false;
-            //    x.SaveToken = true;
-            //    x.TokenValidationParameters = new TokenValidationParameters
-            //    {
-            //        ValidateIssuerSigningKey = true,
-            //        IssuerSigningKey = new SymmetricSecurityKey(securityKey),
-            //        ValidateIssuer = false,
-            //        ValidateAudience = false
-            //    };
-            //});
 
             services.AddTransient<UserService>();
+            services.AddTransient<InstructorService>();
+            services.AddTransient<StudentService>();
+            services.AddTransient<AddressService>();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Vidhya Sadhan API", Version = "v1" });

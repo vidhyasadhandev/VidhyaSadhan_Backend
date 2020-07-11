@@ -1,5 +1,8 @@
 ﻿using AutoMapper;
+using IdentityServer4.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -7,9 +10,11 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using VidyaSadhan_API.Entities;
 using VidyaSadhan_API.Extensions;
 using VidyaSadhan_API.Helpers;
 using VidyaSadhan_API.Models;
@@ -19,17 +24,21 @@ namespace VidyaSadhan_API.Services
     public class UserService
     {
         private VSDbContext _identityContext;
-        UserManager<IdentityUser> _userManager;
-        SignInManager<IdentityUser> _signInManager;
+        UserManager<Account> _userManager;
+        SignInManager<Account> _signInManager;
         private readonly ConfigSettings _configsetting;
         private RoleManager<IdentityRole> _roleManager;
+        private readonly ILogger<UserService> _logger;
         IMapper _map;
+        private readonly InstructorService _instructorService;
 
         public UserService(VSDbContext identityContext,
-            UserManager<IdentityUser> userManager,
-            SignInManager<IdentityUser> signInManager, IMapper map,
+            UserManager<Account> userManager,
+            SignInManager<Account> signInManager, IMapper map,
             IOptionsMonitor<ConfigSettings> optionsMonitor,
-            RoleManager<IdentityRole> roleManager)
+            RoleManager<IdentityRole> roleManager,
+            InstructorService instructorService,
+            ILogger<UserService> logger)
         {
             _identityContext = identityContext;
             _userManager = userManager;
@@ -37,6 +46,8 @@ namespace VidyaSadhan_API.Services
             _configsetting = optionsMonitor.CurrentValue;
             _map = map;
             _roleManager = roleManager;
+            _instructorService = instructorService;
+            _logger = logger;
         }
 
         public async Task<bool> Register(RegisterViewModel register)
@@ -48,10 +59,12 @@ namespace VidyaSadhan_API.Services
                 throw new VSException("Email already registered with:" + register.Email);
             }
 
-            var User = new IdentityUser
+            var User = new Account
             {
-                UserName = register.Email,
+                UserName = register.UserName,
                 Email = register.Email,
+                FirstName = register.FirstName,
+                LastName = register.LastName,
                 PhoneNumber = register.Phone,
                 EmailConfirmed = true,
             };
@@ -61,13 +74,28 @@ namespace VidyaSadhan_API.Services
             {
                 results = await _userManager.CreateAsync(User, register.Password).ConfigureAwait(false);
                 if (results.Succeeded)
-                {
+                {            
                     await _userManager.AddToRoleAsync(User, register.Role.ToString());
+                    switch (register.Role)
+                    {
+                        case UserRoles.Student:
+                            _identityContext.Students.Add(new Student { UserId = User.Id });
+                            break;
+                        case UserRoles.Tutor:
+                            _identityContext.Instructors.Add(new Instructor { UserId = User.Id });
+                            break;
+                        case UserRoles.Parent:
+                        case UserRoles.Admin:
+                        default:
+                            return results.Succeeded;
+                    }               
+                    await _identityContext.SaveChangesAsync().ConfigureAwait(false);
+                   // _identityContext.AccountAddress.Add(new Address {   })
                 }
                 return results.Succeeded;
             }
             catch (Exception)
-            { 
+            {
                 throw new VSException("Unable to Register With Following Errors:", results?.Errors);
             }
         }
@@ -82,7 +110,7 @@ namespace VidyaSadhan_API.Services
                 throw exception;
             }
 
-            var results = await _signInManager.PasswordSignInAsync(login.Email, login.Password, login.RememberMe, false).ConfigureAwait(false);
+            var results = await _signInManager.PasswordSignInAsync(userexists.UserName, login.Password, login.RememberMe, false).ConfigureAwait(false);
 
             if (results.Succeeded)
             {
@@ -111,7 +139,7 @@ namespace VidyaSadhan_API.Services
             }
         }
 
-        public async Task<bool> LogOut(UserViewModel user)
+        public async Task<bool> LogOut()
         {
             try
             {
@@ -129,11 +157,13 @@ namespace VidyaSadhan_API.Services
         {
             try
             {
+                _logger.LogInformation("User Info", _identityContext);
                 var results = _map.Map<IEnumerable<UserViewModel>>(_identityContext.Users);
                 return results;
             }
             catch (Exception ex)
             {
+                _logger.LogError("UserError", ex);
                 throw new VSException("Unable to load Users", ex);
             }
         }
@@ -182,7 +212,7 @@ namespace VidyaSadhan_API.Services
 
         public async Task<bool> DeleteUser(UserViewModel user)
         {
-            var IsUserExist = _identityContext.Users.FirstOrDefault(user => user.Email.Equals(user.Email, StringComparison.OrdinalIgnoreCase));
+            var IsUserExist = await _userManager.FindByEmailAsync(user.Email).ConfigureAwait(false);
 
             if (IsUserExist == null)
             {
@@ -193,7 +223,7 @@ namespace VidyaSadhan_API.Services
             try
             {
                 results = await _userManager.DeleteAsync(IsUserExist).ConfigureAwait(false);
-                if(results.Succeeded == false)
+                if (results.Succeeded == false)
                 {
                     if (results?.Errors.Any() == true)
                     {
@@ -210,7 +240,7 @@ namespace VidyaSadhan_API.Services
             }
         }
 
-        public string authenticateToken(IdentityUser user)
+        public string authenticateToken(Account user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_configsetting.AppSecret);
@@ -231,7 +261,7 @@ namespace VidyaSadhan_API.Services
         public async Task<bool> AddUserRoles(UserRoles Role)
         {
             var existingRoles = await _roleManager.FindByNameAsync(Role.ToString()).ConfigureAwait(false);
-            if(existingRoles != null)
+            if (existingRoles != null)
             {
                 var exception = new VSException("Role Already Existing");
                 exception.Value = "Role Already Existing:" + Role.ToString();
@@ -252,5 +282,40 @@ namespace VidyaSadhan_API.Services
 
             return results.Succeeded;
         }
+
+        public async Task<UserViewModel> RefreshToken(string token)
+        {
+            ClaimsPrincipal claims = GetPrincipalFromExpiredToken(token);
+            var username = claims.Identity.Name;
+            var user = await _userManager.FindByIdAsync(username).ConfigureAwait(false);
+            await _userManager.RemoveAuthenticationTokenAsync(user, "Default", "RefreshToken");
+            var newRefreshToken = await _userManager.GenerateUserTokenAsync(user, "Default", "RefreshToken");
+            await _userManager.SetAuthenticationTokenAsync(user, "Default", "RefreshToken", newRefreshToken);
+            var userModel = _map.Map<UserViewModel>(user);
+            userModel.Token = newRefreshToken;
+            return userModel;
+        }
+
+        private ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
+        {
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateAudience = false,
+                ValidateIssuer = false,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configsetting.AppSecret)),
+                ValidateLifetime = false
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            SecurityToken securityToken;
+            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out securityToken);
+            var jwtSecurityToken = securityToken as JwtSecurityToken;
+            if (jwtSecurityToken == null || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+                throw new SecurityTokenException("Invalid token");
+
+            return principal;
+        }
     }
+
 }

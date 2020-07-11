@@ -15,7 +15,7 @@ using VS_Models;
 
 namespace VidyaSadhan_API.Controllers
 {
-    [Route("[controller]")]
+    [Route("courses")]
     [ApiController]
     public class CourseController : ControllerBase
     {

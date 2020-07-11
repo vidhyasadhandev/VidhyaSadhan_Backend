@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using VidyaSadhan_API.Extensions;
 
 namespace VidyaSadhan_API.Migrations
 {
     [DbContext(typeof(VSDbContext))]
-    partial class VSDbContextModelSnapshot : ModelSnapshot
+    [Migration("20200707231431_datamodels")]
+    partial class datamodels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -260,12 +262,7 @@ namespace VidyaSadhan_API.Migrations
                         .HasColumnType("varchar(4) CHARACTER SET utf8mb4")
                         .HasMaxLength(4);
 
-                    b.Property<string>("UserId")
-                        .HasColumnType("varchar(255) CHARACTER SET utf8mb4");
-
                     b.HasKey("AddressId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Address");
                 });
@@ -304,9 +301,6 @@ namespace VidyaSadhan_API.Migrations
                 {
                     b.Property<int>("CourseId")
                         .HasColumnType("int");
-
-                    b.Property<string>("CourseDescription")
-                        .HasColumnType("longtext CHARACTER SET utf8mb4");
 
                     b.Property<int>("Credits")
                         .HasColumnType("int");
@@ -414,7 +408,12 @@ namespace VidyaSadhan_API.Migrations
                     b.Property<string>("UserId")
                         .HasColumnType("varchar(255) CHARACTER SET utf8mb4");
 
+                    b.Property<string>("Fk_InsUser")
+                        .HasColumnType("varchar(255) CHARACTER SET utf8mb4");
+
                     b.HasKey("UserId");
+
+                    b.HasIndex("Fk_InsUser");
 
                     b.ToTable("Instructor");
                 });
@@ -496,7 +495,12 @@ namespace VidyaSadhan_API.Migrations
                     b.Property<string>("UserId")
                         .HasColumnType("varchar(255) CHARACTER SET utf8mb4");
 
+                    b.Property<string>("Fk_InsStudent")
+                        .HasColumnType("varchar(255) CHARACTER SET utf8mb4");
+
                     b.HasKey("UserId");
+
+                    b.HasIndex("Fk_InsStudent");
 
                     b.ToTable("Student");
                 });
@@ -552,13 +556,6 @@ namespace VidyaSadhan_API.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("VidyaSadhan_API.Entities.Address", b =>
-                {
-                    b.HasOne("VidyaSadhan_API.Entities.Account", "Account")
-                        .WithMany()
-                        .HasForeignKey("UserId");
-                });
-
             modelBuilder.Entity("VidyaSadhan_API.Entities.Course", b =>
                 {
                     b.HasOne("VidyaSadhan_API.Entities.Department", "Department")
@@ -611,9 +608,7 @@ namespace VidyaSadhan_API.Migrations
                 {
                     b.HasOne("VidyaSadhan_API.Entities.Account", "Account")
                         .WithMany("Instructors")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("Fk_InsUser");
                 });
 
             modelBuilder.Entity("VidyaSadhan_API.Entities.Question", b =>
@@ -636,9 +631,7 @@ namespace VidyaSadhan_API.Migrations
                 {
                     b.HasOne("VidyaSadhan_API.Entities.Account", "Account")
                         .WithMany("Students")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("Fk_InsStudent");
                 });
 #pragma warning restore 612, 618
         }

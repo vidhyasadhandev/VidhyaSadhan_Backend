@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using VidyaSadhan_API.Entities;
 using VidyaSadhan_API.Helpers;
 using VidyaSadhan_API.Models;
@@ -15,7 +17,7 @@ namespace VidyaSadhan_API.Controllers
 {
     [Authorize]
     [ApiController]
-    [Route("[controller]")]  
+    [Route("api/users")]  
     public class UserController : ControllerBase
     {
         private readonly ILogger<UserController> _logger;
@@ -47,9 +49,9 @@ namespace VidyaSadhan_API.Controllers
         [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesErrorResponseType(typeof(VSException))]
-        public async Task<IActionResult> LogOut([FromBody] UserViewModel model)
+        public async Task<IActionResult> LogOut()
         {
-            return Ok(await _userService.LogOut(model).ConfigureAwait(false));
+            return Ok(await _userService.LogOut().ConfigureAwait(false));
         }
 
         [AllowAnonymous]
@@ -69,7 +71,16 @@ namespace VidyaSadhan_API.Controllers
         [ProducesErrorResponseType(typeof(VSException))]
         public IActionResult GetAllUsers()
         {
-            return Ok(_userService.GetAllUsers());
+            try
+            {
+                return Ok(_userService.GetAllUsers());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,"Error Occured in users",null);
+                throw;
+            }
+            
         }
 
         [HttpGet]
@@ -89,6 +100,15 @@ namespace VidyaSadhan_API.Controllers
         public async Task<IActionResult> DeleteUser([FromBody] UserViewModel model)
         {
             return Ok(await (_userService.DeleteUser(model).ConfigureAwait(false)));
+        }
+
+        [AllowAnonymous]
+        [Route("refreshtoken")]
+        [ProducesResponseType(typeof(bool), 200)]
+        [HttpPost]
+        public async Task<IActionResult> Refresh([FromBody] UserViewModel token)
+        {
+            return Ok(await _userService.RefreshToken(token.Token));
         }
 
         [AllowAnonymous]
