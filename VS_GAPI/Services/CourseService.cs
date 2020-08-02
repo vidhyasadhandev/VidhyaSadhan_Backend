@@ -18,36 +18,18 @@ namespace VS_GAPI.Services
     public class CourseService : ICourseService
     {
         static string[] Scopes = { ClassroomService.Scope.ClassroomCourses, ClassroomService.Scope.ClassroomRosters };
-        static string ApplicationName = "Vidhya Sadhan Class Room";
+        static string ApplicationName = "vidhyasadhan-v1";
         
         // ClassroomService _classroomService;
 
         public CourseService()
-        {
-            //if(_classroomService != null)
-            //{
-            //    _classroomService = Initiate();
-            //}       
+        {    
         }
-        public ClassroomService Initiate()
+        public ClassroomService Initiate(string user)
         {
             GoogleCredential _credential;
 
-            _credential = GoogleCredential.FromFile("VidhyaSadhan-4cc497c45b73.json").CreateScoped(Scopes);
-            //using (var stream =
-            //    new FileStream("VidhyaSadhan-4cc497c45b73.json", FileMode.Open, FileAccess.Read))
-            //{
-            //    // The file token.json stores the user's access and refresh tokens, and is created
-            //    // automatically when the authorization flow completes for the first time.
-            //    string credPath = "token.json";
-            //    _credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
-            //        GoogleClientSecrets.Load(stream).Secrets,
-            //        Scopes,
-            //        "user",
-            //        CancellationToken.None,
-            //        new FileDataStore(credPath, true)).Result;
-            //}
-
+            _credential = GoogleCredential.FromFile("vsadhan-svc.json").CreateScoped(Scopes).CreateWithUser(user);
             var service = new ClassroomService(new BaseClientService.Initializer()
             {
                 HttpClientInitializer = _credential,

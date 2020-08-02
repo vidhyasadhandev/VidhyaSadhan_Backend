@@ -25,7 +25,6 @@ namespace VidyaSadhan_API.Controllers
             _addressService = addressService;
         }
 
-        [AllowAnonymous]
         [HttpGet("userId")]
         [ProducesResponseType(typeof(IEnumerable<AddressViewModel>), 200)]
         [ProducesErrorResponseType(typeof(VSException))]

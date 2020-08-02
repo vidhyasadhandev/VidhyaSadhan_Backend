@@ -56,7 +56,7 @@ namespace VS_GAPI
             {
                 foreach (var course in response.Courses)
                 {
-                    vsCourse.Add((VCourse)course);
+                   // vsCourse.Add((VCourse)course);
                 }
             }
             

@@ -8,5 +8,7 @@ namespace VidyaSadhan_API.Helpers
     public class ConfigSettings
     {
         public string AppSecret { get; set; }
+        public string AdminEmail { get; set; }
+        public string WebUrl { get; set; }
     }
 }

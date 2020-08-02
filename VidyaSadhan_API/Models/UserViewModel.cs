@@ -8,8 +8,6 @@ namespace VidyaSadhan_API.Models
 {
     public class UserViewModel
     {
-        public string Token { get; set; }
-        public string Id { get; set; }
         public string UserName { get; set; }
         public string NormalizedUserName { get; set; }
 

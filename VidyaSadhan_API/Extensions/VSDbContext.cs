@@ -77,6 +77,7 @@ namespace VidyaSadhan_API.Extensions
         public DbSet<Country> Countries { get; set; }
         public DbSet<Questionnaire> Questionnaires { get; set; }
         public DbSet<Question> Questions { get; set; }
+        public DbSet<RefreshTokenSet> RefreshTokenSets { get; set; }
 
     }
 }

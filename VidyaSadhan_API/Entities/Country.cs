@@ -13,5 +13,8 @@ namespace VidyaSadhan_API.Entities
 
         [StringLength(255)]
         public string CountryName { get; set; }
+
+        [StringLength(10)]
+        public string PhoneCode { get; set; }
     }
 }

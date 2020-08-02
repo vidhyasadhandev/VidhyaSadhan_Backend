@@ -27,6 +27,9 @@ using VidyaSadhan_API.Helpers.Filters;
 using VidyaSadhan_API.Services;
 using VS_GAPI;
 using VS_GAPI.Services;
+using WebPush;
+using NSwag.AspNetCore;
+using VidyaSadhan_API.Models;
 
 namespace VidyaSadhan_API
 {
@@ -44,9 +47,11 @@ namespace VidyaSadhan_API
         {
             services.AddCors(o => o.AddPolicy("trvistapolicy", builder =>
             {
-                builder.AllowAnyOrigin()
-                       .AllowAnyMethod()
-                       .AllowAnyHeader();
+                builder.WithOrigins("http://localhost:4200","http://*.vidhyasadhan.com")
+                .SetIsOriginAllowedToAllowWildcardSubdomains()
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
             }));
 
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
@@ -63,7 +68,7 @@ namespace VidyaSadhan_API
                 };
             });
 
-            services.AddDbContext<VSDbContext>(options => options.UseMySql(Configuration.GetConnectionString("DbConnection")));
+            services.AddDbContext<VSDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DbConnection")));
             services.AddIdentity<Account, IdentityRole>(options =>
             {
                 options.SignIn.RequireConfirmedAccount = true;
@@ -72,10 +77,13 @@ namespace VidyaSadhan_API
 
             services.AddTransient<ICourseService, CourseService>();
 
-            var appSettings = Configuration.GetSection("Secrets:AppSecret");
-            var securityKey = Encoding.ASCII.GetBytes(appSettings.Value);
-
             services.Configure<ConfigSettings>(Configuration.GetSection("Secrets"));
+
+            var vapidDetails = new VapidDetails(
+               Configuration.GetValue<string>("VapidDetails:Subject"),
+               Configuration.GetValue<string>("VapidDetails:PublicKey"),
+               Configuration.GetValue<string>("VapidDetails:PrivateKey"));
+            services.AddTransient(c => vapidDetails);
 
             //services.AddCertificateForwarding(options =>
             //{
@@ -94,6 +102,9 @@ namespace VidyaSadhan_API
             //    };
             //});
 
+            var appSettings = Configuration.GetSection("Secrets:AppSecret");
+            var securityKey = Encoding.ASCII.GetBytes(appSettings.Value);
+
             services.AddAuthentication(x =>
             {
                 x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -101,20 +112,6 @@ namespace VidyaSadhan_API
             })
             .AddJwtBearer(x =>
             {
-                x.Events = new JwtBearerEvents
-                {
-                    OnTokenValidated = context =>
-                    {
-                        var userService = context.HttpContext.RequestServices.GetRequiredService<UserService>();
-                        var userId = int.Parse(context.Principal.Identity.Name);
-                        var user = userService.GetUserById(userId.ToString());
-                        if (user == null)
-                        {
-                            context.Fail("Unauthorized");
-                        }
-                        return Task.CompletedTask;
-                    }
-                };
                 x.RequireHttpsMetadata = false;
                 x.SaveToken = true;
                 x.TokenValidationParameters = new TokenValidationParameters
@@ -122,18 +119,52 @@ namespace VidyaSadhan_API
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(securityKey),
                     ValidateIssuer = false,
-                    ValidateAudience = false
+                    ValidateAudience = false,
+                    ClockSkew = TimeSpan.Zero
                 };
             });
+            //.AddJwtBearer(x =>
+            //{
+            //    x.Events = new JwtBearerEvents
+            //    {
+            //        OnTokenValidated = context =>
+            //        {
+            //            var userService = context.HttpContext.RequestServices.GetRequiredService<UserService>();
+            //            var userId = context.Principal.Identity.Name;
+            //            var user = userService.GetUserById(userId.ToString());
+            //            if (user == null)
+            //            {
+            //                context.Fail("Unauthorized");
+            //            }
+            //            return Task.CompletedTask;
+            //        }
+            //    };
+            //    x.RequireHttpsMetadata = false;
+            //    x.SaveToken = true;
+            //    x.TokenValidationParameters = new TokenValidationParameters
+            //    {
+            //        ValidateIssuerSigningKey = true,
+            //        IssuerSigningKey = new SymmetricSecurityKey(securityKey),
+            //        ValidateIssuer = false,
+            //        ValidateAudience = false
+            //    };
+            //});
 
+            services.Configure<EmailSettings>(Configuration.GetSection("EmailSettings"));
+
+
+            services.AddSingleton<IEmailSender, EmailSender>();
             services.AddTransient<UserService>();
             services.AddTransient<InstructorService>();
             services.AddTransient<StudentService>();
             services.AddTransient<AddressService>();
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Vidhya Sadhan API", Version = "v1" });
-            });
+            services.AddScoped<ICalendarService, CalenderService>();
+            services.AddScoped<StaticService>();
+            services.AddSwaggerDocument();
+            //services.AddSwaggerGen(c =>
+            //{
+            //    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Vidhya Sadhan API", Version = "v1" });
+            //});
 
         }
 
@@ -155,28 +186,31 @@ namespace VidyaSadhan_API
         {
           //  vSDbContext.Database.Migrate();
             app.UseCors("trvistapolicy");
-            app.UseSwagger();
+            app.UsePreflightRequestHandler();
+            //app.UseSwagger();
 
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-                c.RoutePrefix = string.Empty;
-            });
+            //app.UseSwaggerUI(c =>
+            //{
+            //    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+            //    c.RoutePrefix = string.Empty;
+            //});
+
+            app.UseOpenApi();
+            app.UseSwaggerUi3();
 
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
 
-          //  app.UseHttpsRedirection();
-
+            app.UseHttpsRedirection();
             app.UseRouting();
 
 
-            app.UseForwardedHeaders(new ForwardedHeadersOptions
-            {
-                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-            });
+            //app.UseForwardedHeaders(new ForwardedHeadersOptions
+            //{
+            //    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            //});
             app.UseAuthentication();
             app.UseAuthorization();
 

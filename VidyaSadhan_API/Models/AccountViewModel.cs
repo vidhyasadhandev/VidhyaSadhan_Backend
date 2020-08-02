@@ -4,21 +4,20 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace VidyaSadhan_API.Entities
+namespace VidyaSadhan_API.Models
 {
-    public class UserCt
+    public class AccountViewModel : UserViewModel
     {
-        public Guid Id { get; set; }
+        public string Id { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
-        public string Username { get; set; }
-        public byte[] PasswordHash { get; set; }
-        public byte[] PasswordSalt { get; set; }
 
         [JsonIgnore]
         public string Password { get; set; }
 
         [JsonIgnore]
-        public List<RefreshTokenSet> RefreshTokens { get; set; }
+        public List<RefreshTokenViewModel> RefreshTokens { get; set; }
+
+        public List<AddressViewModel> Addresses { get; set; }
     }
 }

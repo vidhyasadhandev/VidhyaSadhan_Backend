@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -19,5 +20,7 @@ namespace VidyaSadhan_API.Models
 
         [Display(Name ="Remember Me")]
         public bool RememberMe { get; set; }
+
+        public string IpAddress { get; set; }
     }
 }

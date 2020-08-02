@@ -25,7 +25,6 @@ namespace VidyaSadhan_API.Controllers
             _instructorService = instructorService;
         }
 
-        [AllowAnonymous]
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<InstructorViewModel>), 200)]
         [ProducesErrorResponseType(typeof(VSException))]
@@ -34,7 +33,6 @@ namespace VidyaSadhan_API.Controllers
             return Ok(await _instructorService.GetAllInstructors());
         }
 
-        [AllowAnonymous]
         [HttpGet("userid")]
         [ProducesResponseType(typeof(InstructorViewModel), 200)]
         [ProducesErrorResponseType(typeof(VSException))]
